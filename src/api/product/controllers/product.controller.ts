@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { RoleIds } from '../../role/enum/role.enum';
 import { CreateProductDto, ProductDetailsDto } from '../dto/product.dto';
 import { ProductService } from '../services/product.service';
@@ -7,6 +8,7 @@ import { FindOneParams } from 'src/common/helper/findOneParams.dto';
 import { CurrentUser } from 'src/api/auth/guards/user.decorator';
 import { User } from 'src/database/entities/user.entity';
 
+@ApiTags('product')
 @Controller('product')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
@@ -16,6 +18,7 @@ export class ProductController {
     return this.productService.getProduct(product.id);
   }
 
+  @ApiBearerAuth()
   @Auth(RoleIds.Admin, RoleIds.Merchant)
   @Post('create')
   async createProduct(
@@ -25,6 +28,7 @@ export class ProductController {
     return this.productService.createProduct(body, user.id);
   }
 
+  @ApiBearerAuth()
   @Auth(RoleIds.Admin, RoleIds.Merchant)
   @Post(':id/details')
   async addProductDetails(
@@ -35,6 +39,7 @@ export class ProductController {
     return this.productService.addProductDetails(product.id, body, user.id);
   }
 
+  @ApiBearerAuth()
   @Auth(RoleIds.Admin, RoleIds.Merchant)
   @Post(':id/activate')
   async activateProduct(
@@ -44,6 +49,7 @@ export class ProductController {
     return this.productService.activateProduct(product.id, user.id);
   }
 
+  @ApiBearerAuth()
   @Auth(RoleIds.Admin, RoleIds.Merchant)
   @Delete(':id')
   async deleteProduct(
