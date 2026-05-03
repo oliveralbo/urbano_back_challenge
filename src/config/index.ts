@@ -16,4 +16,12 @@ export const configuration = () => ({
     email: process.env.ADMIN_EMAIL || 'admin@admin.com',
     password: process.env.ADMIN_PASSWORD || '12345678',
   },
+  mail: {
+    host: process.env.MAIL_HOST,
+    port: parseInt(process.env.MAIL_PORT, 10) || 587,
+    user: process.env.MAIL_USER,
+    pass: process.env.MAIL_PASS,
+    from: process.env.MAIL_FROM,
+    secure: process.env.MAIL_SECURE === 'true',
+  },
 });

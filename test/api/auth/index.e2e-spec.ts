@@ -29,18 +29,18 @@ describe('AuthController (e2e)', () => {
     await app.close;
   });
 
-  describe('/auth/register (POST)', () => {
+  describe('/api/auth/register (POST)', () => {
     it('should success', async () => {
       const response = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/auth/register')
         .send(user);
       expect(response.body.isSuccess).toBe(true);
     });
 
     it('should fail if already registered', async () => {
-      await request(app.getHttpServer()).post('/auth/register').send(user);
+      await request(app.getHttpServer()).post('/api/auth/register').send(user);
       const response = await request(app.getHttpServer())
-        .post('/auth/register')
+        .post('/api/auth/register')
         .send(user);
 
       expect(response.body.isSuccess).toBe(false);
@@ -50,20 +50,20 @@ describe('AuthController (e2e)', () => {
     });
   });
 
-  describe('/auth/login (POST)', () => {
+  describe('/api/auth/login (POST)', () => {
     it('should success', async () => {
-      await request(app.getHttpServer()).post('/auth/register').send(user);
+      await request(app.getHttpServer()).post('/api/auth/register').send(user);
       const response = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send(user);
       expect(response.body.isSuccess).toBe(true);
       expect(response.body.data).toHaveProperty('accessToken');
     });
 
     it('should fail if wrong password', async () => {
-      await request(app.getHttpServer()).post('/auth/register').send(user);
+      await request(app.getHttpServer()).post('/api/auth/register').send(user);
       const response = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({
           ...user,
           password: 'wrong password',
@@ -75,9 +75,9 @@ describe('AuthController (e2e)', () => {
     });
 
     it('should fail if wrong email', async () => {
-      await request(app.getHttpServer()).post('/auth/register').send(user);
+      await request(app.getHttpServer()).post('/api/auth/register').send(user);
       const response = await request(app.getHttpServer())
-        .post('/auth/login')
+        .post('/api/auth/login')
         .send({
           ...user,
           email: 'wrong@test.com',

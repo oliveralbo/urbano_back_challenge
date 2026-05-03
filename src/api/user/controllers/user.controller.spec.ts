@@ -1,12 +1,15 @@
 import { ConfigModule } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { configuration } from 'src/config';
 import { TypeOrmConfigService } from 'src/database/typeorm/typeorm.service';
 import { AuthModule } from '../../auth/auth.module';
 import { UserController } from './user.controller';
 import { User } from '../../../database/entities/user.entity';
 import { UserService } from '../services/user.service';
+import { MailService } from 'src/common/mail/mail.service';
+import { MailModule } from 'src/common/mail/mail.module';
 
 describe('UserController', () => {
   let controller: UserController;
@@ -29,9 +32,17 @@ describe('UserController', () => {
           provide: UserService,
           useValue: fakeUserService,
         },
+        {
+          provide: MailService,
+          useValue: {
+            sendWelcomeEmail: jest.fn(),
+          },
+        },
       ],
       imports: [
         AuthModule,
+        MailModule,
+        EventEmitterModule.forRoot(),
         ConfigModule.forRoot({ load: [configuration], isGlobal: true }),
         TypeOrmModule.forRootAsync({ useClass: TypeOrmConfigService }),
       ],

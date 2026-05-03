@@ -1,6 +1,7 @@
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { configuration } from 'src/config';
 import { Role } from '../../../database/entities/role.entity';
 import { RoleIds, Roles } from '../../role/enum/role.enum';
@@ -14,6 +15,7 @@ describe('AuthService', () => {
   let service: AuthService;
   let fakeUserService: Partial<UserService>;
   let fakeRoleService: Partial<RoleService>;
+  let fakeEventEmitter: Partial<EventEmitter2>;
 
   const newUser = {
     id: 1,
@@ -44,6 +46,11 @@ describe('AuthService', () => {
         return Promise.resolve(customerRole);
       },
     };
+
+    fakeEventEmitter = {
+      emit: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -54,6 +61,10 @@ describe('AuthService', () => {
         {
           provide: RoleService,
           useValue: fakeRoleService,
+        },
+        {
+          provide: EventEmitter2,
+          useValue: fakeEventEmitter,
         },
       ],
       imports: [
