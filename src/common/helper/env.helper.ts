@@ -1,14 +1,9 @@
-import { existsSync } from 'fs';
 import { resolve } from 'path';
 
-export function getEnvPath(dest: string): string {
-  const env: string | undefined = process.env.NODE_ENV;
-  const fallback: string = resolve(`${dest}/.env`);
-  const filename: string = env ? `${env}.env` : 'development.env';
-  let filePath: string = resolve(`${dest}/${filename}`);
-  if (!existsSync(filePath)) {
-    filePath = fallback;
-  }
-
-  return filePath;
+/**
+ * Retorna la ruta absoluta al archivo .env en la raíz del proyecto.
+ * @param _dest Parámetro mantenido por compatibilidad de firma, pero ignorado.
+ */
+export function getEnvPath(): string {
+  return resolve(process.cwd(), '.env');
 }

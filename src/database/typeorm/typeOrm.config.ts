@@ -1,11 +1,8 @@
 import { config } from 'dotenv';
-import { resolve } from 'path';
 import { getEnvPath } from '../../common/helper/env.helper';
 import { DataSourceOptions } from 'typeorm';
 
-const envFilePath: string = getEnvPath(
-  resolve(__dirname, '../..', 'common/envs'),
-);
+const envFilePath: string = getEnvPath();
 config({ path: envFilePath });
 export const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
