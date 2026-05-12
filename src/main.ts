@@ -11,6 +11,12 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
+  app.enableCors({
+    origin: 'http://localhost:5173',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+  });
+
   const config = new DocumentBuilder()
     .setTitle('NestJS Ecommerce API')
     .setDescription('Documentación de la API para el E-commerce Marketplace')
@@ -23,6 +29,8 @@ async function bootstrap() {
   const port = configService.get('port');
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}/api`);
-  console.log(`Swagger documentation available at: http://localhost:${port}/api/docs`);
+  console.log(
+    `Swagger documentation available at: http://localhost:${port}/api/docs`,
+  );
 }
 bootstrap();

@@ -1,11 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
 import { successObject } from 'src/common/helper/sucess-response.interceptor';
-import {
-  Categories,
-  Category,
-  CategoryIds,
-} from 'src/database/entities/category.entity';
+import { Categories, CategoryIds } from 'src/database/entities/category.enum';
+import { Category } from 'src/database/entities/category.entity';
 import { Product, VariationTypes } from 'src/database/entities/product.entity';
 import { errorMessages } from 'src/errors/custom';
 import { EntityManager } from 'typeorm';
