@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { DeleteResult, EntityManager } from 'typeorm';
+import { EntityManager } from 'typeorm';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { CreateProductDto, ProductDetailsDto } from '../dto/product.dto';
 import { Category } from '../../../database/entities/category.entity';
@@ -11,12 +11,16 @@ import { Product } from 'src/database/entities/product.entity';
 import { errorMessages } from 'src/errors/custom';
 import { validate } from 'class-validator';
 import { successObject } from 'src/common/helper/sucess-response.interceptor';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ProductCreatedEvent } from '../events/product-created.event';
+import { ProductActivatedEvent } from '../events/product-activated.event';
 
 @Injectable()
 export class ProductService {
   constructor(
     @InjectEntityManager()
     private readonly entityManager: EntityManager,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async getProduct(productId: number) {
@@ -40,12 +44,20 @@ export class ProductService {
 
     if (!category) throw new NotFoundException(errorMessages.category.notFound);
 
-    const product = await this.entityManager.create(Product, {
+    const product = this.entityManager.create(Product, {
+      ...data,
       category,
       merchantId,
     });
 
-    return this.entityManager.save(product);
+    const savedProduct = await this.entityManager.save(product);
+
+    this.eventEmitter.emit(
+      'product.created',
+      new ProductCreatedEvent(savedProduct.id, merchantId, savedProduct.title),
+    );
+
+    return savedProduct;
   }
 
   async addProductDetails(
@@ -72,7 +84,9 @@ export class ProductService {
     if (!(await this.validate(productId)))
       throw new ConflictException(errorMessages.product.notFulfilled);
 
-    const result = await this.entityManager
+    const product = await this.getProduct(productId);
+
+    await this.entityManager
       .createQueryBuilder()
       .update<Product>(Product)
       .set({
@@ -80,10 +94,14 @@ export class ProductService {
       })
       .where('id = :id', { id: productId })
       .andWhere('merchantId = :merchantId', { merchantId })
-      .returning(['id', 'isActive'])
       .execute();
 
-    return result.raw[0];
+    this.eventEmitter.emit(
+      'product.activated',
+      new ProductActivatedEvent(productId, merchantId, product.title),
+    );
+
+    return { id: productId, isActive: true };
   }
 
   async validate(productId: number) {
