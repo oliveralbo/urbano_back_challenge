@@ -5,6 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { TokenExpiredError } from 'jsonwebtoken';
 import { UserService } from 'src/api/user/services/user.service';
 import { errorMessages } from 'src/errors/custom';
@@ -14,6 +15,7 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly userService: UserService,
+    private readonly configService: ConfigService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -21,7 +23,7 @@ export class AuthGuard implements CanActivate {
       const request = context.switchToHttp().getRequest();
       const bearerToken = request.headers.authorization.split(' ')[1];
       const payload = await this.jwtService.verifyAsync(bearerToken, {
-        secret: process.env.JWT_SECRET,
+        secret: this.configService.get('jwt.secret'),
       });
       request.user = await this.userService.findById(payload.id, {
         roles: true,

@@ -60,4 +60,12 @@ export class UserService {
   public async save(user: User) {
     return this.repository.save(user);
   }
+
+  public async findAll(): Promise<User[]> {
+    return this.repository.find({
+      relations: {
+        roles: true,
+      },
+    });
+  }
 }

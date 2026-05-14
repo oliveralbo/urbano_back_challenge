@@ -6,6 +6,7 @@ import { Serialize } from 'src/common/helper/serialize.interceptor';
 import { User } from 'src/database/entities/user.entity';
 import { UserDto } from '../dto/user.dto';
 import { UserService } from '../services/user.service';
+import { RoleIds } from '../../role/enum/role.enum';
 
 @ApiTags('user')
 @Controller('user')
@@ -19,5 +20,14 @@ export class UserController {
   @Get('profile')
   profile(@CurrentUser() user: User) {
     return user;
+  }
+
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: [UserDto] })
+  @Auth(RoleIds.Admin)
+  @Serialize(UserDto)
+  @Get()
+  async findAll() {
+    return this.userService.findAll();
   }
 }
