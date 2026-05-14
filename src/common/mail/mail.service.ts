@@ -68,4 +68,82 @@ export class MailService {
       throw error;
     }
   }
+
+  async sendMerchantWelcomeEmail(to: string) {
+    if (!this.transporter) return;
+
+    const from =
+      this.configService.get<string>('mail.from') ||
+      '"NestJS Ecommerce" <no-reply@nestjs-ecommerce.com>';
+
+    try {
+      await this.transporter.sendMail({
+        from,
+        to,
+        subject: '¡Bienvenido al Programa de Vendedores! 🛍️',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+            <div style="background-color: #4f46e5; padding: 20px; text-align: center;">
+              <h1 style="color: white; margin: 0;">¡Felicidades!</h1>
+            </div>
+            <div style="padding: 30px; color: #374151; line-height: 1.6;">
+              <h2 style="color: #111827;">Ya eres parte de nuestra comunidad de vendedores</h2>
+              <p>Hola,</p>
+              <p>Tu solicitud para unirte al <strong>Programa de Vendedores</strong> ha sido aprobada con éxito. Ahora tienes acceso a herramientas exclusivas para gestionar tus productos y ventas.</p>
+              <div style="margin: 30px 0; text-align: center;">
+                <a href="#" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Ir al Panel de Vendedor</a>
+              </div>
+              <p>Estamos emocionados de ver lo que traerás a nuestra tienda.</p>
+              <hr style="border: 0; border-top: 1px solid #f3f4f6; margin: 20px 0;">
+              <p style="font-size: 0.875rem; color: #6b7280;">Si no solicitaste este cambio, por favor contacta a nuestro equipo de soporte de inmediato.</p>
+            </div>
+          </div>
+        `,
+      });
+      this.logger.log(`Correo de Vendedor enviado a ${to}`);
+    } catch (error) {
+      this.logger.error(
+        `Error enviando correo de vendedor a ${to}: ${error.message}`,
+      );
+    }
+  }
+
+  async sendAdminNotificationEmail(to: string) {
+    if (!this.transporter) return;
+
+    const from =
+      this.configService.get<string>('mail.from') ||
+      '"NestJS Ecommerce Security" <security@nestjs-ecommerce.com>';
+
+    try {
+      await this.transporter.sendMail({
+        from,
+        to,
+        subject: '⚠️ Alerta de Seguridad: Nuevo Rol de Administrador Asignado',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #fee2e2; border-radius: 8px; overflow: hidden;">
+            <div style="background-color: #dc2626; padding: 20px; text-align: center;">
+              <h1 style="color: white; margin: 0;">Alerta de Seguridad</h1>
+            </div>
+            <div style="padding: 30px; color: #374151; line-height: 1.6;">
+              <h2 style="color: #991b1b;">Se ha designado un nuevo Administrador</h2>
+              <p>Hola,</p>
+              <p>Se te ha otorgado el rol de <strong>Administrador</strong> en el sistema. Este rol tiene privilegios elevados sobre la plataforma.</p>
+              <p style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px;">
+                <strong>Importante:</strong> Asegúrate de mantener tus credenciales seguras y utilizar autenticación de dos factores si está disponible.
+              </p>
+              <p>Si este cambio fue realizado por un administrador autorizado, puedes ignorar este mensaje.</p>
+              <hr style="border: 0; border-top: 1px solid #f3f4f6; margin: 20px 0;">
+              <p style="font-size: 0.875rem; color: #6b7280;">Este es un aviso automático de seguridad. Por favor no respondas a este correo.</p>
+            </div>
+          </div>
+        `,
+      });
+      this.logger.log(`Correo de alerta de Administrador enviado a ${to}`);
+    } catch (error) {
+      this.logger.error(
+        `Error enviando correo de administrador a ${to}: ${error.message}`,
+      );
+    }
+  }
 }
