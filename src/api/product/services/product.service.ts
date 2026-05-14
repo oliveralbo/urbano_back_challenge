@@ -4,10 +4,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
-import { InjectEntityManager } from '@nestjs/typeorm';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { CreateProductDto, ProductDetailsDto } from '../dto/product.dto';
 import { Category } from '../../../database/entities/category.entity';
 import { Product } from 'src/database/entities/product.entity';
+import { Repository } from 'typeorm';
 import { errorMessages } from 'src/errors/custom';
 import { validate } from 'class-validator';
 import { successObject } from 'src/common/helper/sucess-response.interceptor';
@@ -21,6 +22,8 @@ export class ProductService {
     @InjectEntityManager()
     private readonly entityManager: EntityManager,
     private readonly eventEmitter: EventEmitter2,
+    @InjectRepository(Product)
+    private readonly repository: Repository<Product>,
   ) {}
 
   async getProduct(productId: number) {
@@ -33,6 +36,10 @@ export class ProductService {
     if (!product) throw new NotFoundException(errorMessages.product.notFound);
 
     return product;
+  }
+
+  async findAll(): Promise<Product[]> {
+    return this.repository.find();
   }
 
   async createProduct(data: CreateProductDto, merchantId: number) {

@@ -1,12 +1,17 @@
 import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
 import { RoleIds } from '../../role/enum/role.enum';
-import { CreateProductDto, ProductDetailsDto } from '../dto/product.dto';
+import {
+  CreateProductDto,
+  ProductDetailsDto,
+  ProductDto,
+} from '../dto/product.dto';
 import { ProductService } from '../services/product.service';
 import { Auth } from 'src/api/auth/guards/auth.decorator';
 import { FindOneParams } from 'src/common/helper/findOneParams.dto';
 import { CurrentUser } from 'src/api/auth/guards/user.decorator';
 import { User } from 'src/database/entities/user.entity';
+import { Serialize } from 'src/common/helper/serialize.interceptor';
 
 @ApiTags('product')
 @Controller('product')
@@ -57,5 +62,14 @@ export class ProductController {
     @CurrentUser() user: User,
   ) {
     return this.productService.deleteProduct(product.id, user.id);
+  }
+
+  @ApiBearerAuth()
+  @ApiOkResponse({ type: [ProductDto] })
+  @Auth(RoleIds.Admin)
+  @Serialize(ProductDto)
+  @Get()
+  async findAll() {
+    return this.productService.findAll();
   }
 }

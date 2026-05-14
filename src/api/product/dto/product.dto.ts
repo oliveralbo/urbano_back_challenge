@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsDefined,
@@ -55,4 +55,46 @@ export class ProductDetailsDto {
   @IsString()
   @IsNotEmpty()
   public description: string;
+}
+
+export class ProductDto {
+  @ApiProperty()
+  @Expose()
+  public id: number;
+
+  @ApiProperty()
+  @Expose()
+  public code: string;
+
+  @ApiProperty()
+  @Expose()
+  public title: string;
+
+  @ApiProperty()
+  @Expose()
+  public variationType: string;
+
+  @ApiProperty()
+  @Expose()
+  public description: string;
+
+  @ApiProperty()
+  @Expose()
+  public about: string[];
+
+  @ApiProperty()
+  @Expose()
+  public details: any;
+
+  @ApiProperty()
+  @Expose()
+  public isActive: boolean;
+
+  @ApiProperty()
+  @Expose()
+  public merchantId: number;
+
+  @ApiProperty()
+  @Expose()
+  public categoryId: number;
 }
