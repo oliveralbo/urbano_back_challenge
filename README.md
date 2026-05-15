@@ -1,67 +1,59 @@
-# Ecommerce App with Nest.js and Postgres
+# NestJS E-commerce - Challenge Sr Fullstack
 
-## Description
-This project is an ecommerce application built using Nest.js and Postgres. The focus is on writing clean, modular, and testable code, and following a well-organized project structure.
+Este proyecto es una evolución de un sistema base de e-commerce, transformado de un monolito tradicional hacia un modelo **Event-Driven**.
 
-## Technology Stack
+## 1. Diagnóstico del Diseño Original
+Al analizar el repositorio base, se identificaron los siguientes problemas estructurales:
+*   **Acoplamiento Sincrónico:** El sistema realizaba operaciones lineales (ej. registro -> lógica de negocio). Una falla en un paso secundario podía comprometer la transacción principal.
+*   **Lógica de Dominio Dispersa:** Las validaciones de estado (como la activación de productos) requerían llamadas manuales y no estaban automatizadas tras cambios en el modelo.
+*   **Falta de Trazabilidad:** No existía un mecanismo para reaccionar a cambios de estado importantes sin modificar los servicios existentes.
+*   **Uso Directo de EntityManager:** Dificultaba la implementación de patrones como Repository y complicaba las pruebas unitarias.
 
-- Nest.js
-- PostgreSQL
-- TypeORM
-- Jest
+## 2. Solución: Arquitectura Orientada a Eventos
+Se implementó un modelo basado en eventos para desacoplar el núcleo del negocio de las tareas secundarias.
 
-## Getting Started
+### Eventos Implementados
+1.  **`user.registered`**: Emitido tras el registro exitoso de un usuario. Permite que otros módulos (como Mail o Roles) reaccionen de forma independiente.
+2.  **`product.created`**: Al crear un producto, se dispara un flujo de auto-validación.
+3.  **`product.activated`**: Notifica cuando un producto ha pasado las validaciones y está listo para la venta.
 
-To get started with this project, follow these steps:
+### Decisiones Técnicas Relevantes
+*   **Desacoplamiento con `EventEmitter2`**: Se utilizó para asegurar que la emisión de eventos sea asíncrona y no bloquee el flujo principal de la API.
+*   **Listeners Especializados**: Cada evento tiene consumidores dedicados (`ProductListener`, `UserListener`) que encapsulan la lógica de respuesta, manteniendo los servicios (`ProductService`, `AuthService`) enfocados únicamente en su responsabilidad primaria.
+*   **Validación Automática**: El flujo de activación de productos ahora es reactivo; el sistema intenta activar el producto automáticamente al detectar su creación.
 
-- Clone this repository to your local machine.
-- navigate to the nestjs-ecommerce directory.
+## 3. Guía de Inicio rápido
 
-```bash 
-cd ./nestjs-ecommerce
-```
-- start postgres database.
+### Requisitos
+*   Node.js v18+
+*   Docker y Docker Compose
+*   PostgreSQL
 
-```bash
-docker-compose up -d
-```
+### Instalación
+1.  **Clonar el repositorio**
+2.  **Instalar dependencias:**
+    ```bash
+    npm install
+    ```
+3.  **Levantar Infraestructura (BD):**
+    ```bash
+    docker-compose up -d
+    ```
+4.  **Configurar Variables de Entorno:**
+    Crea un archivo `.env` basado en `.env.example`.
+5.  **Ejecutar Migraciones y Seeds:**
+    ```bash
+    npm run migration:run
+    npm run seed:run
+    ```
+6.  **Iniciar la Aplicación:**
+    ```bash
+    npm run start:dev
+    ```
 
-- install app dependencies.
-
-```bash
-npm install
-```
-
-- run database migrations.
-
-```bash
-npm run migration:run
-```
-if you want to generate any future migration
-
-```bash
-npm run migration:generate --name=<migrationName>
-```
-
-- run database seeders.
-
-```bash
-npm run seed:run
-```
-
-- start the applictaion.
-
-```bash
-npm run start:dev
-```
-
-## Testing
-To run the tests, follow these steps:
-1. Install dependencies: `npm install`
-2. Run the tests: `npm run test`
-
-## Contributing
-If you're interested in contributing to this project, please follow these guidelines:
-1. Fork the repository
-2. Make your changes
-3. Submit a pull request
+## 4. Estructura del Proyecto
+*   `src/api`: Módulos de la API (Auth, User, Product, Category).
+*   `src/database`: Entidades de TypeORM, migraciones y seeders.
+*   `src/common`: Helpers y servicios compartidos (Mail, Interceptors).
+*   `src/api/[modulo]/events`: Definición de eventos de dominio.
+*   `src/api/[modulo]/listeners`: Consumidores de eventos.

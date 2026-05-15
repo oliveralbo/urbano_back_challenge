@@ -23,7 +23,7 @@ export class ProductListener {
       );
     } catch (error) {
       this.logger.warn(
-        `No se pudo activar automáticamente el producto ${event.productId}: ${error.message}`,
+        `No se pudo activar automáticamente el producto ${event.productId}: ${error}`,
       );
     }
   }

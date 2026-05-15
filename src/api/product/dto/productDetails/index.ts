@@ -1,5 +1,5 @@
 import { TypeHelpOptions } from 'class-transformer';
-import { Categories } from 'src/database/entities/category.enum';
+import { Categories } from '../../../../database/entities/category.enum';
 import { ComputerDetails } from './computer.details';
 import { TestDetails } from './test.details';
 import { BaseDetails } from './base.details';

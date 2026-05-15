@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsIn, IsNotEmpty, IsNumber, IsString } from 'class-validator';
-import { Categories } from 'src/database/entities/category.enum';
+import { Categories } from '../../../../database/entities/category.enum';
 
 export class ComputerDetails {
   @ApiProperty({ enum: [Categories.Computers] })
