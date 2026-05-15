@@ -66,7 +66,7 @@ export class ProductController {
 
   @ApiBearerAuth()
   @ApiOkResponse({ type: [ProductDto] })
-  @Auth(RoleIds.Admin)
+  @Auth(RoleIds.Customer)
   @Serialize(ProductDto)
   @Get()
   async findAll() {

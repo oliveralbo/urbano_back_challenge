@@ -62,9 +62,8 @@ export class MailService {
         `Correo enviado exitosamente a ${to}. ID: ${info.messageId}`,
       );
     } catch (error) {
-      this.logger.error(
-        `Error al enviar correo real a ${to}: ${error.message}`,
-      );
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Error al enviar correo real a ${to}: ${message}`);
       throw error;
     }
   }
@@ -75,6 +74,9 @@ export class MailService {
     const from =
       this.configService.get<string>('mail.from') ||
       '"NestJS Ecommerce" <no-reply@nestjs-ecommerce.com>';
+
+    const frontendUrl = this.configService.get<string>('frontendUrl');
+    const merchantPanelUrl = `${frontendUrl}/ventas`;
 
     try {
       await this.transporter.sendMail({
@@ -91,7 +93,7 @@ export class MailService {
               <p>Hola,</p>
               <p>Tu solicitud para unirte al <strong>Programa de Vendedores</strong> ha sido aprobada con éxito. Ahora tienes acceso a herramientas exclusivas para gestionar tus productos y ventas.</p>
               <div style="margin: 30px 0; text-align: center;">
-                <a href="#" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Ir al Panel de Vendedor</a>
+                <a href="${merchantPanelUrl}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Ir al Panel de Vendedor</a>
               </div>
               <p>Estamos emocionados de ver lo que traerás a nuestra tienda.</p>
               <hr style="border: 0; border-top: 1px solid #f3f4f6; margin: 20px 0;">
@@ -102,8 +104,9 @@ export class MailService {
       });
       this.logger.log(`Correo de Vendedor enviado a ${to}`);
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Error enviando correo de vendedor a ${to}: ${error.message}`,
+        `Error enviando correo de vendedor a ${to}: ${message}`,
       );
     }
   }
@@ -141,8 +144,51 @@ export class MailService {
       });
       this.logger.log(`Correo de alerta de Administrador enviado a ${to}`);
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Error enviando correo de administrador a ${to}: ${error.message}`,
+        `Error enviando correo de administrador a ${to}: ${message}`,
+      );
+    }
+  }
+
+  async sendRoleRemovedEmail(to: string, roleName: string) {
+    if (!this.transporter) return;
+
+    const from =
+      this.configService.get<string>('mail.from') ||
+      '"NestJS Ecommerce" <no-reply@nestjs-ecommerce.com>';
+
+    try {
+      await this.transporter.sendMail({
+        from,
+        to,
+        subject: 'Actualización de tu cuenta: Rol Removido',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+            <div style="background-color: #6b7280; padding: 20px; text-align: center;">
+              <h1 style="color: white; margin: 0;">Actualización de Cuenta</h1>
+            </div>
+            <div style="padding: 30px; color: #374151; line-height: 1.6;">
+              <h2 style="color: #111827;">Se ha modificado tu acceso</h2>
+              <p>Hola,</p>
+              <p>Te informamos que el rol de <strong>${roleName}</strong> ha sido removido de tu cuenta.</p>
+              ${
+                roleName === 'Merchant'
+                  ? '<p style="color: #991b1b; font-weight: bold;">Importante: Como consecuencia, todos tus productos publicados han sido eliminados de la plataforma.</p>'
+                  : ''
+              }
+              <p>Si crees que esto es un error, por favor contacta a nuestro equipo de soporte.</p>
+              <hr style="border: 0; border-top: 1px solid #f3f4f6; margin: 20px 0;">
+              <p style="font-size: 0.875rem; color: #6b7280;">Gracias por usar nuestra plataforma.</p>
+            </div>
+          </div>
+        `,
+      });
+      this.logger.log(`Correo de rol removido (${roleName}) enviado a ${to}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `Error enviando correo de rol removido a ${to}: ${message}`,
       );
     }
   }

@@ -7,6 +7,7 @@ import { UserService } from 'src/api/user/services/user.service';
 import { errorMessages } from 'src/errors/custom';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RoleAssignedEvent } from '../events/role-assigned.event';
+import { RoleUnassignedEvent } from '../events/role-unassigned.event';
 
 @Injectable()
 export class RoleService {
@@ -27,6 +28,26 @@ export class RoleService {
       this.eventEmitter.emit(
         'role.assigned',
         new RoleAssignedEvent(user.id, user.email, role.id, role.name),
+      );
+    }
+    return user;
+  }
+
+  async unassignRoleFromUser(data: AssignRoleDto) {
+    const role = await this.findById(data.roleId);
+    const user = await this.userService.findById(data.userId, { roles: true });
+
+    const roleIndex = user.roles.findIndex(
+      (userRole) => userRole.id === data.roleId,
+    );
+
+    if (roleIndex !== -1) {
+      user.roles.splice(roleIndex, 1);
+      await this.userService.save(user);
+
+      this.eventEmitter.emit(
+        'role.unassigned',
+        new RoleUnassignedEvent(user.id, user.email, role.id, role.name),
       );
     }
     return user;

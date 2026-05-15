@@ -9,13 +9,7 @@ import { CategoryModule } from './category/category.module';
 import { ErrorsFilter } from 'src/errors/errors.filter';
 
 @Module({
-  imports: [
-    AuthModule,
-    UserModule,
-    RoleModule,
-    ProductModule,
-    CategoryModule,
-  ],
+  imports: [AuthModule, UserModule, RoleModule, ProductModule, CategoryModule],
   providers: [
     {
       provide: APP_INTERCEPTOR,

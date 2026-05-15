@@ -139,4 +139,13 @@ export class ProductService {
 
     return successObject;
   }
+
+  async deleteProductsByMerchant(merchantId: number) {
+    return this.entityManager
+      .createQueryBuilder()
+      .delete()
+      .from(Product)
+      .where('merchantId = :merchantId', { merchantId })
+      .execute();
+  }
 }

@@ -16,6 +16,7 @@ export const configuration = () => ({
     email: process.env.ADMIN_EMAIL || 'admin@admin.com',
     password: process.env.ADMIN_PASSWORD || '12345678',
   },
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   mail: {
     host: process.env.MAIL_HOST,
     port: parseInt(process.env.MAIL_PORT, 10) || 587,

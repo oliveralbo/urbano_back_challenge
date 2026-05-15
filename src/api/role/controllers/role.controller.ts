@@ -15,4 +15,11 @@ export class RoleController {
   async assignRoleToUser(@Body() body: AssignRoleDto) {
     return this.roleService.assignRoleToUser(body);
   }
+
+  @ApiBearerAuth()
+  @Auth(RoleIds.Admin)
+  @Post('unassign')
+  async unassignRoleFromUser(@Body() body: AssignRoleDto) {
+    return this.roleService.unassignRoleFromUser(body);
+  }
 }
