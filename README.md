@@ -18,7 +18,7 @@ Se implementó un modelo basado en eventos para desacoplar el núcleo del negoci
 ### Eventos Implementados
 
 1.  **`user.registered`**: Emitido tras el registro exitoso de un usuario. Permite que otros módulos (como Mail o Roles) reaccionen de forma independiente.
-2.  **`product.created`**: Al crear un producto, se dispara un flujo de auto-validación.
+2.  **`product.updated`**: Se emite cuando el mercante completa la información técnica del producto. Dispara el flujo de **auto-activación**.
 3.  **`product.activated`**: Notifica cuando un producto ha pasado las validaciones y está listo para la venta.
 4.  **`role.assigned`**: Notifica la asignación de un nuevo rol a un usuario, disparando flujos de bienvenida específicos (ej. Welcome Merchant Email).
 5.  **`role.unassigned`**: Gestiona la revocación de permisos. Si se quita el rol de **Merchant**, el sistema elimina automáticamente todos los productos asociados a ese vendedor para mantener la integridad del catálogo.
@@ -27,7 +27,7 @@ Se implementó un modelo basado en eventos para desacoplar el núcleo del negoci
 
 - **Desacoplamiento con `EventEmitter2`**: Se utilizó para asegurar que la emisión de eventos sea asíncrona y no bloquee el flujo principal de la API.
 - **Listeners Especializados**: Cada evento tiene consumidores dedicados (`ProductListener`, `RoleListener`, `UserListener`) que encapsulan la lógica de respuesta, manteniendo los servicios enfocados únicamente en su responsabilidad primaria.
-- **Validación Automática**: El flujo de activación de productos ahora es reactivo; el sistema intenta activar el producto automáticamente al detectar su creación.
+- **Validación Automática**: El flujo de activación de productos es reactivo; el sistema intenta activar el producto automáticamente una vez que detecta que se ha completado su información técnica (`product.updated`).
 - **Integridad en Cascada vía Eventos**: En lugar de usar eliminaciones en cascada a nivel de base de datos (que pueden ser opacas), se utiliza el evento `role.unassigned` para que el módulo de productos limpie el catálogo de forma explícita y trazable cuando un usuario deja de ser vendedor.
 
 ## 3. Guía de Inicio rápido
@@ -112,6 +112,13 @@ Backend NestJS Dockerizado (Render)
 PostgreSQL Managed (Neon)
 ```
 
-## 6. Repositorio FrontEnd
+## 6. Documentación de la API (Swagger)
+
+Como parte de un enfoque de desarrollo profesional y para facilitar la integración con el frontend o servicios de terceros, la API cuenta con documentación interactiva autogenerada mediante **Swagger (OpenAPI)**.
+
+Esta documentación está disponible tanto en el entorno local como en producción:
+- **Producción:** [https://urbano-ecommerce.onrender.com/api/docs](https://urbano-ecommerce.onrender.com/api/docs)
+
+## 7. Repositorio FrontEnd
 
 https://github.com/oliveralbo/urbano-ecommerce

@@ -13,8 +13,8 @@ import { errorMessages } from 'src/errors/custom';
 import { validate } from 'class-validator';
 import { successObject } from 'src/common/helper/sucess-response.interceptor';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { ProductCreatedEvent } from '../events/product-created.event';
 import { ProductActivatedEvent } from '../events/product-activated.event';
+import { ProductUpdatedEvent } from '../events/product-updated.event';
 
 @Injectable()
 export class ProductService {
@@ -59,11 +59,6 @@ export class ProductService {
 
     const savedProduct = await this.entityManager.save(product);
 
-    this.eventEmitter.emit(
-      'product.created',
-      new ProductCreatedEvent(savedProduct.id, merchantId, savedProduct.title),
-    );
-
     return savedProduct;
   }
 
@@ -84,6 +79,12 @@ export class ProductService {
       .execute();
     if (result.affected < 1)
       throw new NotFoundException(errorMessages.product.notFound);
+
+    this.eventEmitter.emit(
+      'product.updated',
+      new ProductUpdatedEvent(productId, merchantId, body.title),
+    );
+
     return result.raw[0];
   }
 

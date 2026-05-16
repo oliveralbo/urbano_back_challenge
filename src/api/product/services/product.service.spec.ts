@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getEntityManagerToken } from '@nestjs/typeorm';
+import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
 import { successObject } from 'src/common/helper/sucess-response.interceptor';
 import { Categories, CategoryIds } from 'src/database/entities/category.enum';
 import { Category } from 'src/database/entities/category.entity';
@@ -9,6 +9,7 @@ import { EntityManager } from 'typeorm';
 import { ProductDetailsDto } from '../dto/product.dto';
 import { ComputerDetails } from '../dto/productDetails/computer.details';
 import { ProductService } from './product.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('ProductService', () => {
   let service: ProductService;
@@ -81,6 +82,19 @@ describe('ProductService', () => {
         {
           provide: getEntityManagerToken(),
           useValue: fakeEntityManager,
+        },
+        {
+          provide: getRepositoryToken(Product),
+          useValue: {
+            find: jest.fn(),
+            findOne: jest.fn(),
+          },
+        },
+        {
+          provide: EventEmitter2,
+          useValue: {
+            emit: jest.fn(),
+          },
         },
       ],
     }).compile();
@@ -207,7 +221,7 @@ describe('ProductService', () => {
       };
       fakeEntityManager.findOne = jest
         .fn()
-        .mockReturnValueOnce(fulfilledProduct);
+        .mockResolvedValue(fulfilledProduct);
 
       fakeEntityManager.createQueryBuilder().update = jest
         .fn()

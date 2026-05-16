@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { ProductService } from '../services/product.service';
-import { ProductCreatedEvent } from '../events/product-created.event';
+import { ProductUpdatedEvent } from '../events/product-updated.event';
 import { ProductActivatedEvent } from '../events/product-activated.event';
 import { RoleUnassignedEvent } from '../../role/events/role-unassigned.event';
 import { Roles } from '../../role/enum/role.enum';
@@ -12,10 +12,10 @@ export class ProductListener {
 
   constructor(private readonly productService: ProductService) {}
 
-  @OnEvent('product.created')
-  async handleProductCreatedEvent(event: ProductCreatedEvent) {
+  @OnEvent('product.updated')
+  async handleProductUpdatedEvent(event: ProductUpdatedEvent) {
     this.logger.log(
-      `Nuevo producto creado: "${event.title}" (ID: ${event.productId}). Iniciando auto-activación...`,
+      `Producto actualizado: "${event.title}" (ID: ${event.productId}). Iniciando auto-activación...`,
     );
 
     try {
@@ -25,7 +25,7 @@ export class ProductListener {
       );
     } catch (error) {
       this.logger.warn(
-        `No se pudo activar automáticamente el producto ${event.productId}: ${error}`,
+        `No se pudo activar automáticamente el producto ${event.productId} tras su actualización: ${error}`,
       );
     }
   }
