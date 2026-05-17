@@ -19,9 +19,7 @@ export class UserRegisteredListener {
         `Correo de bienvenida enviado exitosamente a ${event.email}`,
       );
     } catch (error) {
-      this.logger.error(
-        `Error enviando correo a ${event.email}: ${error.message}`,
-      );
+      this.logger.error(`Error enviando correo a ${event.email}: ${error}`);
     }
   }
 }

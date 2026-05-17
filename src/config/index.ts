@@ -24,5 +24,6 @@ export const configuration = () => ({
     pass: process.env.MAIL_PASS,
     from: process.env.MAIL_FROM,
     secure: process.env.MAIL_SECURE === 'true',
+    requireTLS: true,
   },
 });
