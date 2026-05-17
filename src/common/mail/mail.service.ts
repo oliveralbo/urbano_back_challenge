@@ -1,196 +1,275 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
+import * as Brevo from '@getbrevo/brevo';
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private transporter: nodemailer.Transporter;
+  private apiInstance?: Brevo.TransactionalEmailsApi;
 
   constructor(private readonly configService: ConfigService) {
     this.init();
   }
 
+  // -------------------------
+  // INIT BREVO CLIENT
+  // -------------------------
   private init() {
-    const host = this.configService.get<string>('mail.host');
-    const port = this.configService.get<number>('mail.port');
-    const user = this.configService.get<string>('mail.user');
-    const pass = this.configService.get<string>('mail.pass');
+    const apiKey = this.configService.get<string>('BREVO_API_KEY');
 
-    if (host && user && pass) {
-      this.transporter = nodemailer.createTransport({
-        host,
-        port: port || 587,
-        secure: this.configService.get<string>('mail.secure') === 'true',
-        requireTLS: true,
-        auth: {
-          user,
-          pass,
-        },
-      });
-      this.logger.log(`MailService configurado con SMTP real: ${host}`);
-    } else {
-      this.logger.warn(
-        'AVISO: Faltan credenciales SMTP en el .env. El envío de correos fallará hasta que se configuren MAIL_HOST, MAIL_USER y MAIL_PASS.',
-      );
+    if (!apiKey) {
+      this.logger.warn('BREVO_API_KEY no configurada.');
+      return;
     }
+
+    this.apiInstance = new Brevo.TransactionalEmailsApi();
+
+    this.apiInstance.setApiKey(
+      Brevo.TransactionalEmailsApiApiKeys.apiKey,
+      apiKey,
+    );
+
+    this.logger.log('MailService configurado con Brevo API');
   }
 
-  async sendWelcomeEmail(to: string, name?: string) {
-    if (!this.transporter) {
-      const errorMsg =
-        'No se puede enviar el correo: Transporter no inicializado. Verifica el .env y REINICIA el servidor.';
-      this.logger.error(errorMsg);
-      throw new Error(errorMsg);
+  private getClient(): Brevo.TransactionalEmailsApi {
+    if (!this.apiInstance) {
+      throw new Error('Brevo no inicializado (apiInstance undefined)');
+    }
+    return this.apiInstance;
+  }
+
+  private getFrom(): Brevo.SendSmtpEmailSender {
+    const email = this.configService.get<string>('mail.from');
+
+    if (!email) {
+      throw new Error('mail.from no configurado en .env');
     }
 
-    const from =
-      this.configService.get<string>('mail.from') ||
-      '"NestJS Ecommerce" <no-reply@nestjs-ecommerce.com>';
+    return {
+      email,
+      name: 'NestJS Ecommerce',
+    };
+  }
+
+  private getFrontendUrl(): string {
+    const url = this.configService.get<string>('frontendUrl');
+
+    if (!url) {
+      throw new Error('frontendUrl no configurado en .env');
+    }
+
+    return url;
+  }
+
+  // -------------------------
+  // ERROR LOGGER CENTRAL
+  // -------------------------
+  private logBrevoError(context: string, error: any) {
+    const debug =
+      error?.response?.data ||
+      error?.response?.body ||
+      error?.body ||
+      error?.error ||
+      error;
+
+    this.logger.error(
+      `[BREVO ERROR - ${context}] ${JSON.stringify(debug, null, 2)}`,
+    );
+  }
+
+  // -------------------------
+  // LAYOUT HTML BASE
+  // -------------------------
+  private getHtmlLayout(content: string, title: string): string {
+    const primaryColor = '#4f46e5'; // Indigo 600
+    const secondaryColor = '#f9fafb';
+    const textColor = '#374151';
+
+    return `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: ${secondaryColor}; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }
+          .wrapper { width: 100%; table-layout: fixed; background-color: ${secondaryColor}; padding-bottom: 40px; }
+          .main { background-color: #ffffff; margin: 40px auto; width: 100%; max-width: 600px; border-spacing: 0; color: ${textColor}; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; }
+          .header { background-color: ${primaryColor}; padding: 40px 20px; text-align: center; }
+          .header h1 { color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+          .content { padding: 40px 30px; line-height: 1.6; font-size: 16px; }
+          .footer { text-align: center; padding: 20px; font-size: 13px; color: #9ca3af; }
+          .button { display: inline-block; padding: 14px 28px; background-color: ${primaryColor}; color: #ffffff !important; text-decoration: none; border-radius: 6px; font-weight: 600; margin-top: 25px; text-align: center; }
+          .highlight { color: ${primaryColor}; font-weight: 600; }
+          hr { border: none; border-top: 1px solid #e5e7eb; margin: 30px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="wrapper">
+          <table class="main" align="center">
+            <tr>
+              <td class="header">
+                <h1>${title}</h1>
+              </td>
+            </tr>
+            <tr>
+              <td class="content">
+                ${content}
+              </td>
+            </tr>
+            <tr>
+              <td class="footer">
+                &copy; ${new Date().getFullYear()} NestJS Ecommerce. <br>
+                Este es un correo automático, por favor no lo respondas.
+              </td>
+            </tr>
+          </table>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  // -------------------------
+  // WELCOME EMAIL
+  // -------------------------
+  async sendWelcomeEmail(to: string, name?: string) {
+    const client = this.getClient();
+    const userName = name || to.split('@')[0];
+
+    const html = this.getHtmlLayout(
+      `
+      <h2 style="margin-top: 0;">¡Hola, ${userName}! 👋</h2>
+      <p>Estamos muy emocionados de tenerte con nosotros. Gracias por unirte a nuestra comunidad de compras.</p>
+      <p>En nuestra plataforma podrás encontrar los mejores productos a precios increíbles.</p>
+      <a href="${this.getFrontendUrl()}" class="button">Empezar a comprar</a>
+      <hr>
+      <p style="font-size: 14px; color: #6b7280;">Si tienes alguna duda, simplemente responde a este correo. Estamos aquí para ayudarte.</p>
+      `,
+      '¡Bienvenido a NestJS Ecommerce!',
+    );
+
+    const email: Brevo.SendSmtpEmail = {
+      to: [{ email: to.trim() }],
+      sender: this.getFrom(),
+      subject: '¡Bienvenido a nuestra plataforma! 🚀',
+      textContent: `Hola ${userName}, gracias por registrarte en nuestra plataforma de E-commerce.`,
+      htmlContent: html,
+    };
 
     try {
-      const info = await this.transporter.sendMail({
-        from,
-        to,
-        subject: '¡Bienvenido a nuestra plataforma! 🚀',
-        text: `Hola ${name || to}, gracias por registrarte.`,
-        html: `<b>Hola ${
-          name || to
-        }</b>,<br>Gracias por registrarte en nuestra plataforma de E-commerce.`,
-      });
-
-      this.logger.log(
-        `Correo enviado exitosamente a ${to}. ID: ${info.messageId}`,
-      );
+      await client.sendTransacEmail(email);
+      this.logger.log(`Correo welcome enviado a ${to}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Error al enviar correo real a ${to}: ${message}`);
+      this.logBrevoError('sendWelcomeEmail', error);
       throw error;
     }
   }
 
+  // -------------------------
+  // MERCHANT WELCOME
+  // -------------------------
   async sendMerchantWelcomeEmail(to: string) {
-    if (!this.transporter) return;
-
-    const from =
-      this.configService.get<string>('mail.from') ||
-      '"NestJS Ecommerce" <no-reply@nestjs-ecommerce.com>';
-
-    const frontendUrl = this.configService.get<string>('frontendUrl');
+    const client = this.getClient();
+    const frontendUrl = this.getFrontendUrl();
     const merchantPanelUrl = `${frontendUrl}/ventas`;
 
+    const html = this.getHtmlLayout(
+      `
+      <h2 style="margin-top: 0;">¡Felicidades por tu nuevo rol! 🛍️</h2>
+      <p>Tu cuenta ha sido actualizada exitosamente al perfil de <span class="highlight">Vendedor</span>.</p>
+      <p>A partir de ahora, puedes empezar a publicar tus productos y gestionar tus ventas desde tu panel exclusivo.</p>
+      <div style="text-align: center;">
+        <a href="${merchantPanelUrl}" class="button">Ir al Panel de Vendedor</a>
+      </div>
+      <p style="margin-top: 30px; font-size: 14px; color: #6b7280;">Si no solicitaste este cambio, por favor contacta con soporte de inmediato.</p>
+      `,
+      '¡Ya eres Vendedor!',
+    );
+
+    const email: Brevo.SendSmtpEmail = {
+      to: [{ email: to.trim() }],
+      sender: this.getFrom(),
+      subject: '¡Bienvenido al Programa de Vendedores! 🛍️',
+      htmlContent: html,
+    };
+
     try {
-      await this.transporter.sendMail({
-        from,
-        to,
-        subject: '¡Bienvenido al Programa de Vendedores! 🛍️',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
-            <div style="background-color: #4f46e5; padding: 20px; text-align: center;">
-              <h1 style="color: white; margin: 0;">¡Felicidades!</h1>
-            </div>
-            <div style="padding: 30px; color: #374151; line-height: 1.6;">
-              <h2 style="color: #111827;">Ya eres parte de nuestra comunidad de vendedores</h2>
-              <p>Hola,</p>
-              <p>Tu solicitud para unirte al <strong>Programa de Vendedores</strong> ha sido aprobada con éxito. Ahora tienes acceso a herramientas exclusivas para gestionar tus productos y ventas.</p>
-              <div style="margin: 30px 0; text-align: center;">
-                <a href="${merchantPanelUrl}" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Ir al Panel de Vendedor</a>
-              </div>
-              <p>Estamos emocionados de ver lo que traerás a nuestra tienda.</p>
-              <hr style="border: 0; border-top: 1px solid #f3f4f6; margin: 20px 0;">
-              <p style="font-size: 0.875rem; color: #6b7280;">Si no solicitaste este cambio, por favor contacta a nuestro equipo de soporte de inmediato.</p>
-            </div>
-          </div>
-        `,
-      });
-      this.logger.log(`Correo de Vendedor enviado a ${to}`);
+      await client.sendTransacEmail(email);
+      this.logger.log(`Correo merchant enviado a ${to}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `Error enviando correo de vendedor a ${to}: ${message}`,
-      );
+      this.logBrevoError('sendMerchantWelcomeEmail', error);
     }
   }
 
+  // -------------------------
+  // ADMIN NOTIFICATION
+  // -------------------------
   async sendAdminNotificationEmail(to: string) {
-    if (!this.transporter) return;
+    const client = this.getClient();
 
-    const from =
-      this.configService.get<string>('mail.from') ||
-      '"NestJS Ecommerce Security" <security@nestjs-ecommerce.com>';
+    const html = this.getHtmlLayout(
+      `
+      <h2 style="margin-top: 0; color: #dc2626;">⚠️ Aviso de Seguridad</h2>
+      <p>Se ha asignado el rol de <span class="highlight" style="color: #dc2626;">Administrador</span> a tu cuenta.</p>
+      <p>Este rol otorga privilegios elevados sobre la plataforma. Si no fuiste tú o no esperabas esta acción, asegúrate de revisar tu configuración de seguridad.</p>
+      <hr>
+      <p style="font-size: 14px; color: #6b7280;">Si este cambio fue correcto, puedes ignorar este mensaje.</p>
+      `,
+      'Cambio de Rol: Administrador',
+    );
+
+    const email: Brevo.SendSmtpEmail = {
+      to: [{ email: to }],
+      sender: {
+        email: this.getFrom().email,
+        name: 'Security System',
+      },
+      subject: '⚠️ Nuevo rol de Administrador asignado',
+      htmlContent: html,
+    };
 
     try {
-      await this.transporter.sendMail({
-        from,
-        to,
-        subject: '⚠️ Alerta de Seguridad: Nuevo Rol de Administrador Asignado',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #fee2e2; border-radius: 8px; overflow: hidden;">
-            <div style="background-color: #dc2626; padding: 20px; text-align: center;">
-              <h1 style="color: white; margin: 0;">Alerta de Seguridad</h1>
-            </div>
-            <div style="padding: 30px; color: #374151; line-height: 1.6;">
-              <h2 style="color: #991b1b;">Se ha designado un nuevo Administrador</h2>
-              <p>Hola,</p>
-              <p>Se te ha otorgado el rol de <strong>Administrador</strong> en el sistema. Este rol tiene privilegios elevados sobre la plataforma.</p>
-              <p style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px;">
-                <strong>Importante:</strong> Asegúrate de mantener tus credenciales seguras y utilizar autenticación de dos factores si está disponible.
-              </p>
-              <p>Si este cambio fue realizado por un administrador autorizado, puedes ignorar este mensaje.</p>
-              <hr style="border: 0; border-top: 1px solid #f3f4f6; margin: 20px 0;">
-              <p style="font-size: 0.875rem; color: #6b7280;">Este es un aviso automático de seguridad. Por favor no respondas a este correo.</p>
-            </div>
-          </div>
-        `,
-      });
-      this.logger.log(`Correo de alerta de Administrador enviado a ${to}`);
+      await client.sendTransacEmail(email);
+      this.logger.log(`Correo admin enviado a ${to}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `Error enviando correo de administrador a ${to}: ${message}`,
-      );
+      this.logBrevoError('sendAdminNotificationEmail', error);
     }
   }
 
+  // -------------------------
+  // ROLE REMOVED
+  // -------------------------
   async sendRoleRemovedEmail(to: string, roleName: string) {
-    if (!this.transporter) return;
+    const client = this.getClient();
 
-    const from =
-      this.configService.get<string>('mail.from') ||
-      '"NestJS Ecommerce" <no-reply@nestjs-ecommerce.com>';
+    const html = this.getHtmlLayout(
+      `
+      <h2 style="margin-top: 0;">Actualización de Cuenta</h2>
+      <p>Te informamos que se ha removido el rol: <span class="highlight">${roleName}</span> de tu perfil.</p>
+      ${
+        roleName === 'Merchant'
+          ? '<p style="background-color: #fff7ed; padding: 15px; border-left: 4px solid #f97316; color: #9a3412;"><b>Aviso:</b> Como tu rol de Vendedor ha sido removido, tus productos asociados ya no estarán disponibles en la tienda.</p>'
+          : ''
+      }
+      <p>Si crees que esto es un error, por favor ponte en contacto con nosotros.</p>
+      `,
+      'Tu cuenta ha sido actualizada',
+    );
+
+    const email: Brevo.SendSmtpEmail = {
+      to: [{ email: to }],
+      sender: this.getFrom(),
+      subject: 'Actualización de tu cuenta',
+      htmlContent: html,
+    };
 
     try {
-      await this.transporter.sendMail({
-        from,
-        to,
-        subject: 'Actualización de tu cuenta: Rol Removido',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
-            <div style="background-color: #6b7280; padding: 20px; text-align: center;">
-              <h1 style="color: white; margin: 0;">Actualización de Cuenta</h1>
-            </div>
-            <div style="padding: 30px; color: #374151; line-height: 1.6;">
-              <h2 style="color: #111827;">Se ha modificado tu acceso</h2>
-              <p>Hola,</p>
-              <p>Te informamos que el rol de <strong>${roleName}</strong> ha sido removido de tu cuenta.</p>
-              ${
-                roleName === 'Merchant'
-                  ? '<p style="color: #991b1b; font-weight: bold;">Importante: Como consecuencia, todos tus productos publicados han sido eliminados de la plataforma.</p>'
-                  : ''
-              }
-              <p>Si crees que esto es un error, por favor contacta a nuestro equipo de soporte.</p>
-              <hr style="border: 0; border-top: 1px solid #f3f4f6; margin: 20px 0;">
-              <p style="font-size: 0.875rem; color: #6b7280;">Gracias por usar nuestra plataforma.</p>
-            </div>
-          </div>
-        `,
-      });
-      this.logger.log(`Correo de rol removido (${roleName}) enviado a ${to}`);
+      await client.sendTransacEmail(email);
+      this.logger.log(`Correo role removed enviado a ${to}`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `Error enviando correo de rol removido a ${to}: ${message}`,
-      );
+      this.logBrevoError('sendRoleRemovedEmail', error);
     }
   }
 }
